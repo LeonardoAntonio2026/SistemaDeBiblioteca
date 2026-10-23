@@ -5,34 +5,36 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
 import java.math.BigDecimal;
+import java.util.List;
 
 @Entity
-@Table(name="tipo_lector")
+@Table(name = "tipo_lector")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class TipoLector {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_tipo_lector")
-    private int id;
+    private Integer id;
 
-
-    @Column(length = 50)
+    @Column(nullable = false, length = 50)
     private String tipo;
 
-    @Column()
-    private int dias_prestamo;
+    @Column(name = "dias_prestamo", nullable = false)
+    private int diasPrestamo;
 
-    @Column()
+    @Column(name = "max_libros", nullable = false)
     private int maxLibros;
 
-    @Column()
+    @Column(name = "max_renovaciones", nullable = false)
     private int maxRenovaciones;
 
-    @Column(precision = 10, scale = 2)
-    private BigDecimal multa_por_dia;
+    @Column(name = "multa_por_dia", precision = 10, scale = 2, nullable = false)
+    private BigDecimal multaPorDia;
+
+
 }
