@@ -1,5 +1,6 @@
 package com.example.SistemaDeBiblioteca.model;
 
+import com.example.SistemaDeBiblioteca.model.enums.EstadoLector;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -28,9 +29,9 @@ public class Lector {
     @Column(length = 100)
     private String contacto;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private String estado;
-
+    private EstadoLector estado;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_tipo_lector", nullable = false)

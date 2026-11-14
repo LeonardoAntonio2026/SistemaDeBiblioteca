@@ -1,5 +1,6 @@
 package com.example.SistemaDeBiblioteca.model;
 
+import com.example.SistemaDeBiblioteca.model.enums.EstadoReserva;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -18,23 +19,32 @@ import java.time.LocalDateTime;
 public class Reserva {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_reserva")
     private Long id;
 
-    private LocalDateTime fechaHoraSubida;
+    @Column(name = "fecha_hora_solicitud", nullable = false)
+    private LocalDateTime fechaHoraSolicitud;
 
-    private String estado;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private EstadoReserva estado;
 
+    @Column(name = "fecha_limite_recoleccion")
     private LocalDate fechaLimiteRecoleccion;
 
-    @ManyToOne
-    @JoinColumn(name = "lector_id_lector")
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "id_lector", nullable = false)
     private Lector lector;
 
-    @ManyToOne
-    @JoinColumn(name = "titulo_id_titulo")
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "id_titulo", nullable = false)
     private Titulo titulo;
 
     @ManyToOne
-    @JoinColumn(name = "ejemplar_id_ejemplar")
+    @JoinColumn(name = "id_ejemplar")
     private Ejemplar ejemplar;
+
+    @OneToOne
+    @JoinColumn(name = "id_prestamo")
+    private Prestamo prestamo;
 }

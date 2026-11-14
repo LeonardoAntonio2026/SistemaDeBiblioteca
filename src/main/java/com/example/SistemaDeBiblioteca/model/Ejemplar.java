@@ -1,5 +1,6 @@
 package com.example.SistemaDeBiblioteca.model;
 
+import com.example.SistemaDeBiblioteca.model.enums.EstadoEjemplar;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -27,11 +28,12 @@ public class Ejemplar {
     @Column(nullable = false)
     private String condicion;
 
-    @Column(name = "estado_operativo", nullable = false)
-    private String estadoOperativo;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_operativo", nullable = false, length = 20)
+    private EstadoEjemplar estadoOperativo;
 
-    @ManyToOne
-    @JoinColumn(name = "id_titulo")
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "id_titulo", nullable = false)
     private Titulo titulo;
 
 }

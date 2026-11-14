@@ -17,17 +17,29 @@ import java.time.LocalDate;
 public class Prestamo {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_prestamo")
     private Long id;
+
+    @Column(name = "fecha_salida", nullable = false)
     private LocalDate fechaSalida;
+
+    @Column(name = "fecha_limite", nullable = false)
     private LocalDate fechaLimite;
+
+    @Column(name = "fecha_devolucion")
     private LocalDate fechaDevolucion;
+
+    @Column(name = "renovaciones_realizadas", nullable = false)
     private int renovacionesRealizadas;
+
     private String observaciones;
-    @ManyToOne
-    @JoinColumn(name = "lector_id_lector")
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "id_lector", nullable = false)
     private Lector lector;
-    @ManyToOne
-    @JoinColumn(name = "ejemplar_id_ejemplar")
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "id_ejemplar", nullable = false)
     private Ejemplar ejemplar;
 
 }

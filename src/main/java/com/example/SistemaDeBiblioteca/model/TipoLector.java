@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import java.math.BigDecimal;
-import java.util.List;
 
 @Entity
 @Table(name = "tipo_lector")
@@ -21,7 +20,7 @@ public class TipoLector {
     @Column(name = "id_tipo_lector")
     private Integer id;
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, unique = true, length = 50)
     private String tipo;
 
     @Column(name = "dias_prestamo", nullable = false)
@@ -35,6 +34,5 @@ public class TipoLector {
 
     @Column(name = "multa_por_dia", precision = 10, scale = 2, nullable = false)
     private BigDecimal multaPorDia;
-
 
 }

@@ -25,6 +25,9 @@ public class Titulo {
     @Column(length = 100)
     private String autor;
 
+    @Column(unique = true, length = 20)
+    private String isbn;
+
     @Column(length = 100)
     private String editorial;
 

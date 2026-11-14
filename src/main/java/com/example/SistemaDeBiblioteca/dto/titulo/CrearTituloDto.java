@@ -11,6 +11,8 @@ public class CrearTituloDto {
 
     private String autor;
 
+    private String isbn;
+
     private String editorial;
 
     private int anio;
