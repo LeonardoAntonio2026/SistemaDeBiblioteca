@@ -4,22 +4,28 @@ import com.example.SistemaDeBiblioteca.model.enums.EstadoLector;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class EditarLectorDto {
-    @NotNull
+    @NotNull(message = "El id del lector es obligatorio")
     private Long lectorId;
-    @NotBlank
-    @Size(max = 50)
+    @NotBlank(message = "El folio es obligatorio")
+    @Size(max = 50, message = "El folio no puede pasar de 50 caracteres")
     private String folio;
-    @NotBlank
-    @Size(max = 150)
+    @NotBlank(message = "El nombre es obligatorio")
+    @Size(max = 150, message = "El nombre no puede pasar de 150 caracteres")
     private String nombre;
-    @Size(max = 100)
+    @Size(max = 100, message = "El contacto no puede pasar de 100 caracteres")
     private String contacto;
-    @NotNull
+    @NotNull(message = "El tipo de lector es obligatorio")
     private Integer tipoLectorId;
-    @NotNull
+    @NotNull(message = "El estado es obligatorio")
     private EstadoLector estado;
 }

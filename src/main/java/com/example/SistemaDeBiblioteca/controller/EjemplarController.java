@@ -12,6 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/ejemplar")
+@CrossOrigin("*")
 public class EjemplarController {
     private final EjemplarService ejemplarService;
 

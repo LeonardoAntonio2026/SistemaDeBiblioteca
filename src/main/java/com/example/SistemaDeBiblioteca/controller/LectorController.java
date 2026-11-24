@@ -12,6 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/lector")
+@CrossOrigin("*")
 public class LectorController {
     private final LectorService lectorService;
 
