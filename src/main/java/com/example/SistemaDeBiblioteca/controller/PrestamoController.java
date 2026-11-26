@@ -37,6 +37,26 @@ public class PrestamoController {
         return prestamoService.listarPrestamos();
     }
 
+    @GetMapping("/activos")
+    public List<PrestamoDto> listarActivos() {
+        return prestamoService.listarActivos();
+    }
+
+    @GetMapping("/vencidos")
+    public List<PrestamoDto> listarVencidos() {
+        return prestamoService.listarVencidos();
+    }
+
+    @GetMapping("/lector/{lectorId}")
+    public List<PrestamoDto> historialDelLector(@PathVariable Long lectorId) {
+        return prestamoService.historialDelLector(lectorId);
+    }
+
+    @GetMapping("/ejemplar/{ejemplarId}")
+    public PrestamoDto prestamoDelEjemplar(@PathVariable Long ejemplarId) {
+        return prestamoService.prestamoDelEjemplar(ejemplarId);
+    }
+
     @GetMapping("/{id}")
     public PrestamoDto obtenerPrestamo(@PathVariable Long id) {
         return prestamoService.obtenerPrestamo(id);

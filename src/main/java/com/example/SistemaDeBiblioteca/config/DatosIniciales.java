@@ -1,9 +1,11 @@
 package com.example.SistemaDeBiblioteca.config;
 
+import com.example.SistemaDeBiblioteca.model.Configuracion;
 import com.example.SistemaDeBiblioteca.model.TipoLector;
 import com.example.SistemaDeBiblioteca.model.Usuario;
 import com.example.SistemaDeBiblioteca.model.enums.EstadoUsuario;
 import com.example.SistemaDeBiblioteca.model.enums.RolUsuario;
+import com.example.SistemaDeBiblioteca.repository.ConfiguracionRepository;
 import com.example.SistemaDeBiblioteca.repository.TipoLectorRepository;
 import com.example.SistemaDeBiblioteca.repository.UsuarioRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -21,26 +23,42 @@ public class DatosIniciales implements ApplicationRunner {
 
     private final TipoLectorRepository tipoLectorRepository;
     private final UsuarioRepository usuarioRepository;
+    private final ConfiguracionRepository configuracionRepository;
     private final PasswordEncoder passwordEncoder;
     private final String adminNombre;
     private final String adminPassword;
+    private final int diasRetencion;
 
     public DatosIniciales(TipoLectorRepository tipoLectorRepository,
                           UsuarioRepository usuarioRepository,
+                          ConfiguracionRepository configuracionRepository,
                           PasswordEncoder passwordEncoder,
                           @Value("${biblioteca.admin.nombre:admin}") String adminNombre,
-                          @Value("${biblioteca.admin.password:}") String adminPassword) {
+                          @Value("${biblioteca.admin.password:}") String adminPassword,
+                          @Value("${biblioteca.reserva.dias-retencion:3}") int diasRetencion) {
         this.tipoLectorRepository = tipoLectorRepository;
         this.usuarioRepository = usuarioRepository;
+        this.configuracionRepository = configuracionRepository;
         this.passwordEncoder = passwordEncoder;
         this.adminNombre = adminNombre;
         this.adminPassword = adminPassword;
+        this.diasRetencion = diasRetencion;
     }
 
     @Override
     public void run(ApplicationArguments args) {
         cargarTiposDeLector();
+        crearConfiguracion();
         crearPrimerAdministrador();
+    }
+
+    /** Plazo de retención de partida; el administrador lo cambia después (HU-ADM-03). */
+    private void crearConfiguracion() {
+        if (configuracionRepository.count() > 0) {
+            return;
+        }
+        configuracionRepository.save(new Configuracion(null, diasRetencion));
+        log.info("Configuración inicial creada ({} días de retención)", diasRetencion);
     }
 
     /** Valores de partida; el administrador los ajusta después (HU-ADM-02). */

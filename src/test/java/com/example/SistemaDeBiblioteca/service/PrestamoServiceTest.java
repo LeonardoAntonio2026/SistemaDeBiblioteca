@@ -4,6 +4,7 @@ import com.example.SistemaDeBiblioteca.dto.prestamo.CrearPrestamoDto;
 import com.example.SistemaDeBiblioteca.dto.prestamo.DevolucionDto;
 import com.example.SistemaDeBiblioteca.dto.prestamo.DevolverPrestamoDto;
 import com.example.SistemaDeBiblioteca.dto.prestamo.PrestamoDto;
+import com.example.SistemaDeBiblioteca.exception.RecursoNoEncontradoException;
 import com.example.SistemaDeBiblioteca.exception.ReglaNegocioException;
 import com.example.SistemaDeBiblioteca.model.Ejemplar;
 import com.example.SistemaDeBiblioteca.model.Lector;
@@ -29,6 +30,7 @@ import org.mockito.ArgumentCaptor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,6 +46,8 @@ class PrestamoServiceTest {
     private PrestamoRepository repository;
     private MultaRepository multaRepository;
     private ReservaRepository reservaRepository;
+    private LectorRepository lectorRepository;
+    private EjemplarRepository ejemplarRepository;
     private PrestamoService service;
     private Lector ana;
     private Ejemplar ejemplar;
@@ -52,12 +56,12 @@ class PrestamoServiceTest {
     @BeforeEach
     void preparar() {
         repository = mock(PrestamoRepository.class);
-        LectorRepository lectorRepository = mock(LectorRepository.class);
-        EjemplarRepository ejemplarRepository = mock(EjemplarRepository.class);
+        lectorRepository = mock(LectorRepository.class);
+        ejemplarRepository = mock(EjemplarRepository.class);
         multaRepository = mock(MultaRepository.class);
         reservaRepository = mock(ReservaRepository.class);
         service = new PrestamoService(repository, lectorRepository, ejemplarRepository, multaRepository,
-                reservaRepository, 3);
+                reservaRepository, configuracion());
 
         TipoLector alumno = new TipoLector(1, "alumno", 7, 3, 1, new BigDecimal("5.00"));
         calculo = new Titulo(1L, "Cálculo I", "Stewart", null, null, 2018, null, null);
@@ -100,6 +104,47 @@ class PrestamoServiceTest {
 
         assertThatThrownBy(() -> service.crearPrestamo(pedido())).isInstanceOf(ReglaNegocioException.class);
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    void crearPrestamoDeEjemplarRetenidoParaElMismoLectorCumpleLaReserva() {
+        ejemplar.setEstadoOperativo(EstadoEjemplar.RETENIDO);
+        Reserva reserva = new Reserva(7L, LocalDateTime.now().minusDays(2), EstadoReserva.LISTA_PARA_RECOGER,
+                LocalDate.now().plusDays(1), ana, calculo, ejemplar, null);
+        when(reservaRepository.findFirstByEjemplarIdAndEstado(1L, EstadoReserva.LISTA_PARA_RECOGER))
+                .thenReturn(Optional.of(reserva));
+
+        service.crearPrestamo(pedido());
+
+        assertThat(ejemplar.getEstadoOperativo()).isEqualTo(EstadoEjemplar.PRESTADO);
+        assertThat(reserva.getEstado()).isEqualTo(EstadoReserva.CUMPLIDA);
+        assertThat(reserva.getPrestamo()).isNotNull();
+    }
+
+    @Test
+    void crearPrestamoRechazaEjemplarRetenidoParaOtroLector() {
+        ejemplar.setEstadoOperativo(EstadoEjemplar.RETENIDO);
+        Lector luis = new Lector(2L, "L-002", "Luis", null, EstadoLector.ACTIVO, ana.getTipoLector());
+        Reserva reserva = new Reserva(7L, LocalDateTime.now().minusDays(2), EstadoReserva.LISTA_PARA_RECOGER,
+                LocalDate.now().plusDays(1), luis, calculo, ejemplar, null);
+        when(reservaRepository.findFirstByEjemplarIdAndEstado(1L, EstadoReserva.LISTA_PARA_RECOGER))
+                .thenReturn(Optional.of(reserva));
+
+        assertThatThrownBy(() -> service.crearPrestamo(pedido())).isInstanceOf(ReglaNegocioException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void crearPrestamoRechazaReservaQueYaVencio() {
+        ejemplar.setEstadoOperativo(EstadoEjemplar.RETENIDO);
+        Reserva reserva = new Reserva(7L, LocalDateTime.now().minusDays(5), EstadoReserva.LISTA_PARA_RECOGER,
+                LocalDate.now().minusDays(1), ana, calculo, ejemplar, null);
+        when(reservaRepository.findFirstByEjemplarIdAndEstado(1L, EstadoReserva.LISTA_PARA_RECOGER))
+                .thenReturn(Optional.of(reserva));
+
+        assertThatThrownBy(() -> service.crearPrestamo(pedido())).isInstanceOf(ReglaNegocioException.class);
+        verify(repository, never()).save(any());
+        assertThat(reserva.getEstado()).isEqualTo(EstadoReserva.LISTA_PARA_RECOGER);
     }
 
     @Test
@@ -175,6 +220,47 @@ class PrestamoServiceTest {
                 .isInstanceOf(ReglaNegocioException.class);
     }
 
+    @Test
+    void listarVencidosBuscaLosQuePasaronDeHoy() {
+        Prestamo vencido = new Prestamo(10L, LocalDate.now().minusDays(10), LocalDate.now().minusDays(3), null, 0,
+                null, ana, ejemplar);
+        when(repository.findByFechaDevolucionIsNullAndFechaLimiteBefore(LocalDate.now()))
+                .thenReturn(List.of(vencido));
+
+        List<PrestamoDto> respuesta = service.listarVencidos();
+
+        assertThat(respuesta).hasSize(1);
+        assertThat(respuesta.get(0).lector()).isEqualTo("Ana");
+        assertThat(respuesta.get(0).tipoLector()).isEqualTo("alumno");
+    }
+
+    @Test
+    void historialDeUnLectorQueNoExisteLanzaError() {
+        when(lectorRepository.existsById(99L)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.historialDelLector(99L)).isInstanceOf(RecursoNoEncontradoException.class);
+    }
+
+    @Test
+    void prestamoDelEjemplarDiceQuienLoTiene() {
+        when(ejemplarRepository.existsById(1L)).thenReturn(true);
+        Prestamo prestamo = new Prestamo(10L, LocalDate.now(), LocalDate.now().plusDays(7), null, 0, null, ana,
+                ejemplar);
+        when(repository.findFirstByEjemplarIdAndFechaDevolucionIsNull(1L)).thenReturn(Optional.of(prestamo));
+
+        PrestamoDto respuesta = service.prestamoDelEjemplar(1L);
+
+        assertThat(respuesta.lector()).isEqualTo("Ana");
+        assertThat(respuesta.fechaLimite()).isEqualTo(LocalDate.now().plusDays(7));
+    }
+
+    @Test
+    void prestamoDelEjemplarQueNoEstaPrestadoLanzaError() {
+        when(ejemplarRepository.existsById(1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.prestamoDelEjemplar(1L)).isInstanceOf(ReglaNegocioException.class);
+    }
+
     private Prestamo prestamoActivo(LocalDate fechaLimite) {
         ejemplar.setEstadoOperativo(EstadoEjemplar.PRESTADO);
         Prestamo prestamo = new Prestamo(10L, fechaLimite.minusDays(7), fechaLimite, null, 0, null, ana, ejemplar);
@@ -195,5 +281,12 @@ class PrestamoServiceTest {
         payload.setEstadoEjemplar(estado);
         payload.setMontoMulta(montoMulta);
         return payload;
+    }
+
+    // Simula que el administrador configuró 3 días de retención
+    private static ConfiguracionService configuracion() {
+        ConfiguracionService configuracion = mock(ConfiguracionService.class);
+        when(configuracion.diasRetencion()).thenReturn(3);
+        return configuracion;
     }
 }

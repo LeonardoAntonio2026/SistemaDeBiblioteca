@@ -22,7 +22,6 @@ import com.example.SistemaDeBiblioteca.repository.LectorRepository;
 import com.example.SistemaDeBiblioteca.repository.MultaRepository;
 import com.example.SistemaDeBiblioteca.repository.PrestamoRepository;
 import com.example.SistemaDeBiblioteca.repository.ReservaRepository;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,20 +39,20 @@ public class PrestamoService {
     private final EjemplarRepository ejemplarRepository;
     private final MultaRepository multaRepository;
     private final ReservaRepository reservaRepository;
-    private final int diasRetencion;
+    private final ConfiguracionService configuracionService;
 
     public PrestamoService(PrestamoRepository prestamoRepository,
                            LectorRepository lectorRepository,
                            EjemplarRepository ejemplarRepository,
                            MultaRepository multaRepository,
                            ReservaRepository reservaRepository,
-                           @Value("${biblioteca.reserva.dias-retencion:3}") int diasRetencion) {
+                           ConfiguracionService configuracionService) {
         this.prestamoRepository = prestamoRepository;
         this.lectorRepository = lectorRepository;
         this.ejemplarRepository = ejemplarRepository;
         this.multaRepository = multaRepository;
         this.reservaRepository = reservaRepository;
-        this.diasRetencion = diasRetencion;
+        this.configuracionService = configuracionService;
     }
 
     @Transactional
@@ -70,7 +69,18 @@ public class PrestamoService {
         if (multaRepository.existsByPrestamoLectorIdAndEstado(lector.getId(), EstadoMulta.PENDIENTE)) {
             throw new ReglaNegocioException("El lector tiene multas pendientes");
         }
-        if (ejemplar.getEstadoOperativo() != EstadoEjemplar.DISPONIBLE) {
+        // Un ejemplar retenido solo se le presta al lector que lo reservó
+        Reserva reserva = null;
+        if (ejemplar.getEstadoOperativo() == EstadoEjemplar.RETENIDO) {
+            reserva = reservaRepository.findFirstByEjemplarIdAndEstado(ejemplar.getId(), EstadoReserva.LISTA_PARA_RECOGER)
+                    .orElseThrow(() -> new ReglaNegocioException("El ejemplar está retenido pero no tiene reserva"));
+            if (!reserva.getLector().getId().equals(lector.getId())) {
+                throw new ReglaNegocioException("El ejemplar está retenido para otro lector");
+            }
+            if (reserva.getFechaLimiteRecoleccion().isBefore(LocalDate.now())) {
+                throw new ReglaNegocioException("La reserva ya venció, el lector no lo recogió a tiempo");
+            }
+        } else if (ejemplar.getEstadoOperativo() != EstadoEjemplar.DISPONIBLE) {
             throw new ReglaNegocioException("El ejemplar no está disponible");
         }
         if (prestamoRepository.countByLectorIdAndFechaDevolucionIsNull(lector.getId()) >= tipo.getMaxLibros()) {
@@ -87,8 +97,16 @@ public class PrestamoService {
 
         ejemplar.setEstadoOperativo(EstadoEjemplar.PRESTADO);
         ejemplarRepository.save(ejemplar);
+        Prestamo guardado = prestamoRepository.save(nuevoPrestamo);
 
-        return PrestamoDto.de(prestamoRepository.save(nuevoPrestamo));
+        // Si venía de una reserva, la reserva queda cumplida
+        if (reserva != null) {
+            reserva.setEstado(EstadoReserva.CUMPLIDA);
+            reserva.setPrestamo(guardado);
+            reservaRepository.save(reserva);
+        }
+
+        return PrestamoDto.de(guardado);
     }
 
     @Transactional
@@ -140,6 +158,40 @@ public class PrestamoService {
         return PrestamoDto.de(buscar(id));
     }
 
+    // Préstamos que todavía no se devuelven
+    @Transactional(readOnly = true)
+    public List<PrestamoDto> listarActivos() {
+        return prestamoRepository.findByFechaDevolucionIsNull().stream().map(PrestamoDto::de).toList();
+    }
+
+    // HU-ADM-04: préstamos sin devolver cuya fecha límite ya pasó
+    @Transactional(readOnly = true)
+    public List<PrestamoDto> listarVencidos() {
+        return prestamoRepository.findByFechaDevolucionIsNullAndFechaLimiteBefore(LocalDate.now())
+                .stream().map(PrestamoDto::de).toList();
+    }
+
+    // HU-BIB-09: historial de un lector, del más reciente al más viejo
+    @Transactional(readOnly = true)
+    public List<PrestamoDto> historialDelLector(Long lectorId) {
+        if (!lectorRepository.existsById(lectorId)) {
+            throw new RecursoNoEncontradoException("Lector", lectorId);
+        }
+        return prestamoRepository.findByLectorIdOrderByFechaSalidaDesc(lectorId)
+                .stream().map(PrestamoDto::de).toList();
+    }
+
+    // HU-BIB-09: quién tiene un ejemplar
+    @Transactional(readOnly = true)
+    public PrestamoDto prestamoDelEjemplar(Long ejemplarId) {
+        if (!ejemplarRepository.existsById(ejemplarId)) {
+            throw new RecursoNoEncontradoException("Ejemplar", ejemplarId);
+        }
+        Prestamo prestamo = prestamoRepository.findFirstByEjemplarIdAndFechaDevolucionIsNull(ejemplarId)
+                .orElseThrow(() -> new ReglaNegocioException("El ejemplar no está prestado"));
+        return PrestamoDto.de(prestamo);
+    }
+
     private Prestamo buscar(Long id) {
         return prestamoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Préstamo", id));
@@ -169,7 +221,7 @@ public class PrestamoService {
         Reserva reserva = enTurno.get();
         reserva.setEstado(EstadoReserva.LISTA_PARA_RECOGER);
         reserva.setEjemplar(ejemplar);
-        reserva.setFechaLimiteRecoleccion(hoy.plusDays(diasRetencion));
+        reserva.setFechaLimiteRecoleccion(hoy.plusDays(configuracionService.diasRetencion()));
         reservaRepository.save(reserva);
         return EstadoEjemplar.RETENIDO;
     }
