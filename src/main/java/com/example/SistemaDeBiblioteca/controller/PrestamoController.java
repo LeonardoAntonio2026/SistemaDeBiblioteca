@@ -61,4 +61,9 @@ public class PrestamoController {
     public PrestamoDto obtenerPrestamo(@PathVariable Long id) {
         return prestamoService.obtenerPrestamo(id);
     }
+
+    @PutMapping("/renovar/{id}")
+    public PrestamoDto renovarPrestamo(@PathVariable Long id) {
+        return prestamoService.renovarPrestamo(id);
+    }
 }

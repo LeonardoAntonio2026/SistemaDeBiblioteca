@@ -21,4 +21,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     List<Reserva> findByEstadoAndFechaLimiteRecoleccionBefore(EstadoReserva estado, LocalDate fecha);
 
     boolean existsByLectorIdAndTituloIdAndEstado(Long lectorId, Long tituloId, EstadoReserva estado);
+
+    boolean existsByTituloIdAndEstado(Long tituloID, EstadoReserva estado);
+
 }

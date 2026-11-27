@@ -17,7 +17,6 @@ public class ConfiguracionService {
         this.configuracionRepository = configuracionRepository;
     }
 
-    // HU-ADM-03: cuántos días se guarda un ejemplar para el lector en turno
     @Transactional
     public ConfiguracionDto editarConfiguracion(EditarConfiguracionDto payload) {
         Configuracion configuracion = buscar();
@@ -30,7 +29,6 @@ public class ConfiguracionService {
         return ConfiguracionDto.de(buscar());
     }
 
-    // Lo usan los préstamos y las reservas para calcular la fecha límite de recolección
     @Transactional(readOnly = true)
     public int diasRetencion() {
         return buscar().getDiasRetencion();

@@ -69,7 +69,7 @@ public class PrestamoService {
         if (multaRepository.existsByPrestamoLectorIdAndEstado(lector.getId(), EstadoMulta.PENDIENTE)) {
             throw new ReglaNegocioException("El lector tiene multas pendientes");
         }
-        // Un ejemplar retenido solo se le presta al lector que lo reservó
+
         Reserva reserva = null;
         if (ejemplar.getEstadoOperativo() == EstadoEjemplar.RETENIDO) {
             reserva = reservaRepository.findFirstByEjemplarIdAndEstado(ejemplar.getId(), EstadoReserva.LISTA_PARA_RECOGER)
@@ -99,7 +99,6 @@ public class PrestamoService {
         ejemplarRepository.save(ejemplar);
         Prestamo guardado = prestamoRepository.save(nuevoPrestamo);
 
-        // Si venía de una reserva, la reserva queda cumplida
         if (reserva != null) {
             reserva.setEstado(EstadoReserva.CUMPLIDA);
             reserva.setPrestamo(guardado);
@@ -158,20 +157,19 @@ public class PrestamoService {
         return PrestamoDto.de(buscar(id));
     }
 
-    // Préstamos que todavía no se devuelven
+
     @Transactional(readOnly = true)
     public List<PrestamoDto> listarActivos() {
         return prestamoRepository.findByFechaDevolucionIsNull().stream().map(PrestamoDto::de).toList();
     }
 
-    // HU-ADM-04: préstamos sin devolver cuya fecha límite ya pasó
     @Transactional(readOnly = true)
     public List<PrestamoDto> listarVencidos() {
         return prestamoRepository.findByFechaDevolucionIsNullAndFechaLimiteBefore(LocalDate.now())
                 .stream().map(PrestamoDto::de).toList();
     }
 
-    // HU-BIB-09: historial de un lector, del más reciente al más viejo
+
     @Transactional(readOnly = true)
     public List<PrestamoDto> historialDelLector(Long lectorId) {
         if (!lectorRepository.existsById(lectorId)) {
@@ -181,7 +179,6 @@ public class PrestamoService {
                 .stream().map(PrestamoDto::de).toList();
     }
 
-    // HU-BIB-09: quién tiene un ejemplar
     @Transactional(readOnly = true)
     public PrestamoDto prestamoDelEjemplar(Long ejemplarId) {
         if (!ejemplarRepository.existsById(ejemplarId)) {
@@ -224,5 +221,35 @@ public class PrestamoService {
         reserva.setFechaLimiteRecoleccion(hoy.plusDays(configuracionService.diasRetencion()));
         reservaRepository.save(reserva);
         return EstadoEjemplar.RETENIDO;
+    }
+
+    public PrestamoDto renovarPrestamo(Long id) {
+        Prestamo prestamo = buscar(id);
+        Lector lector = prestamo.getLector();
+        TipoLector tipo = lector.getTipoLector();
+
+        if (prestamo.getFechaDevolucion() != null) {
+            throw new ReglaNegocioException("No se puede renovar un préstamo ya devuelto");
+        }
+        if (prestamo.getFechaLimite().isBefore(LocalDate.now())) {
+            throw new ReglaNegocioException("No se puede renovar un préstamo vencido; debe devolverse primero");
+        }
+        if (lector.getEstado() == EstadoLector.SUSPENDIDO) {
+            throw new ReglaNegocioException("El lector está suspendido");
+        }
+        if (multaRepository.existsByPrestamoLectorIdAndEstado(lector.getId(), EstadoMulta.PENDIENTE)) {
+            throw new ReglaNegocioException("El lector tiene multas pendientes");
+        }
+        if (prestamo.getRenovacionesRealizadas() >= tipo.getMaxRenovaciones()) {
+            throw new ReglaNegocioException("El lector alcanzó el máximo de " + tipo.getMaxRenovaciones() + " renovaciones");
+        }
+        Long tituloId = prestamo.getEjemplar().getTitulo().getId();
+        if (reservaRepository.existsByTituloIdAndEstado(tituloId, EstadoReserva.EN_COLA)) {
+            throw new ReglaNegocioException("No se puede renovar porque hay lectores en cola esperando este título");
+        }
+
+        prestamo.setRenovacionesRealizadas(prestamo.getRenovacionesRealizadas() + 1);
+        prestamo.setFechaLimite(prestamo.getFechaLimite().plusDays(tipo.getDiasPrestamo()));
+        return PrestamoDto.de(prestamoRepository.save(prestamo));
     }
 }

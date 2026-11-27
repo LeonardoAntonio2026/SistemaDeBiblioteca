@@ -19,7 +19,6 @@ public class TipoLectorService {
         this.tipoLectorRepository = tipoLectorRepository;
     }
 
-    // HU-ADM-02: cambiar la política de un tipo de lector (alumno, docente o externo)
     @Transactional
     public TipoLectorDto editarTipoLector(EditarTipoLectorDto payload) {
         TipoLector tipo = buscar(payload.getTipoLectorId());

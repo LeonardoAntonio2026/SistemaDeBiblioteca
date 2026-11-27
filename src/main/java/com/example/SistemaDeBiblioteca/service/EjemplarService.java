@@ -3,16 +3,23 @@ package com.example.SistemaDeBiblioteca.service;
 import com.example.SistemaDeBiblioteca.dto.ejemplar.CrearEjemplarDto;
 import com.example.SistemaDeBiblioteca.dto.ejemplar.EditarEjemplarDto;
 import com.example.SistemaDeBiblioteca.dto.ejemplar.EjemplarDto;
+import com.example.SistemaDeBiblioteca.dto.ejemplar.LocalizacionEjemplarDto;
 import com.example.SistemaDeBiblioteca.exception.RecursoNoEncontradoException;
 import com.example.SistemaDeBiblioteca.exception.ReglaNegocioException;
 import com.example.SistemaDeBiblioteca.model.Ejemplar;
+import com.example.SistemaDeBiblioteca.model.Prestamo;
+import com.example.SistemaDeBiblioteca.model.Reserva;
 import com.example.SistemaDeBiblioteca.model.Titulo;
 import com.example.SistemaDeBiblioteca.model.enums.EstadoEjemplar;
+import com.example.SistemaDeBiblioteca.model.enums.EstadoReserva;
 import com.example.SistemaDeBiblioteca.repository.EjemplarRepository;
+import com.example.SistemaDeBiblioteca.repository.PrestamoRepository;
+import com.example.SistemaDeBiblioteca.repository.ReservaRepository;
 import com.example.SistemaDeBiblioteca.repository.TituloRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -20,10 +27,17 @@ public class EjemplarService {
 
     private final EjemplarRepository ejemplarRepository;
     private final TituloRepository tituloRepository;
+    private final PrestamoRepository prestamoRepository;
+    private final ReservaRepository reservaRepository;
 
-    public EjemplarService(EjemplarRepository ejemplarRepository, TituloRepository tituloRepository) {
+    public EjemplarService(EjemplarRepository ejemplarRepository,
+                           TituloRepository tituloRepository,
+                           PrestamoRepository prestamoRepository,
+                           ReservaRepository reservaRepository) {
         this.ejemplarRepository = ejemplarRepository;
         this.tituloRepository = tituloRepository;
+        this.prestamoRepository = prestamoRepository;
+        this.reservaRepository = reservaRepository;
     }
 
     @Transactional
@@ -84,6 +98,40 @@ public class EjemplarService {
     @Transactional(readOnly = true)
     public EjemplarDto obtenerEjemplar(Long id) {
         return EjemplarDto.de(buscar(id));
+    }
+
+
+    @Transactional(readOnly = true)
+    public LocalizacionEjemplarDto localizarEjemplar(Long id) {
+        Ejemplar ejemplar = buscar(id);
+        Long lectorId = null;
+        String lectorNombre = null;
+        LocalDate fechaLimite = null;
+
+        if (ejemplar.getEstadoOperativo() == EstadoEjemplar.PRESTADO) {
+            Prestamo prestamo = prestamoRepository.findFirstByEjemplarIdAndFechaDevolucionIsNull(id)
+                    .orElseThrow(() -> new ReglaNegocioException("El ejemplar figura prestado sin préstamo activo"));
+            lectorId = prestamo.getLector().getId();
+            lectorNombre = prestamo.getLector().getNombre();
+            fechaLimite = prestamo.getFechaLimite();
+        } else if (ejemplar.getEstadoOperativo() == EstadoEjemplar.RETENIDO) {
+            Reserva reserva = reservaRepository.findFirstByEjemplarIdAndEstado(id, EstadoReserva.LISTA_PARA_RECOGER)
+                    .orElseThrow(() -> new ReglaNegocioException("El ejemplar figura retenido sin reserva activa"));
+            lectorId = reserva.getLector().getId();
+            lectorNombre = reserva.getLector().getNombre();
+            fechaLimite = reserva.getFechaLimiteRecoleccion();
+        }
+
+        return new LocalizacionEjemplarDto(
+                ejemplar.getId(),
+                ejemplar.getFolio(),
+                ejemplar.getTitulo().getTitulo(),
+                ejemplar.getEstadoOperativo(),
+                ejemplar.getUbicacion(),
+                lectorId,
+                lectorNombre,
+                fechaLimite
+        );
     }
 
     private Ejemplar buscar(Long id) {

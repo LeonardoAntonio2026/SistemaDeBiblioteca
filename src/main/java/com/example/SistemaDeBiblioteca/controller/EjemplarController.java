@@ -3,6 +3,7 @@ package com.example.SistemaDeBiblioteca.controller;
 import com.example.SistemaDeBiblioteca.dto.ejemplar.CrearEjemplarDto;
 import com.example.SistemaDeBiblioteca.dto.ejemplar.EditarEjemplarDto;
 import com.example.SistemaDeBiblioteca.dto.ejemplar.EjemplarDto;
+import com.example.SistemaDeBiblioteca.dto.ejemplar.LocalizacionEjemplarDto;
 import com.example.SistemaDeBiblioteca.service.EjemplarService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -44,5 +45,10 @@ public class EjemplarController {
     @GetMapping("/{id}")
     public EjemplarDto obtenerEjemplar(@PathVariable Long id) {
         return ejemplarService.obtenerEjemplar(id);
+    }
+
+    @GetMapping("/localizar/{id}")
+    public LocalizacionEjemplarDto listarPorLocalizacion(@PathVariable Long id) {
+        return ejemplarService.localizarEjemplar(id);
     }
 }

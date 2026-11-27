@@ -23,13 +23,11 @@ public class MultaService {
         this.lectorRepository = lectorRepository;
     }
 
-    // HU-BIB-08: el lector pagó la multa
     @Transactional
     public MultaDto pagarMulta(Long id) {
         return cambiarEstado(id, EstadoMulta.PAGADA);
     }
 
-    // HU-BIB-08: la biblioteca le perdona la multa
     @Transactional
     public MultaDto condonarMulta(Long id) {
         return cambiarEstado(id, EstadoMulta.CONDONADA);
@@ -40,7 +38,6 @@ public class MultaService {
         return multaRepository.findAll().stream().map(MultaDto::de).toList();
     }
 
-    // HU-ADM-04: multas que faltan por pagar
     @Transactional(readOnly = true)
     public List<MultaDto> listarPendientes() {
         return multaRepository.findByEstado(EstadoMulta.PENDIENTE).stream().map(MultaDto::de).toList();
@@ -59,7 +56,6 @@ public class MultaService {
         return MultaDto.de(buscar(id));
     }
 
-    // Solo una multa pendiente se puede pagar o condonar
     private MultaDto cambiarEstado(Long id, EstadoMulta nuevoEstado) {
         Multa multa = buscar(id);
 

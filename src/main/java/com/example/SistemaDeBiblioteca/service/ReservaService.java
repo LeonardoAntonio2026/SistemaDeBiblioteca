@@ -56,7 +56,6 @@ public class ReservaService {
         this.configuracionService = configuracionService;
     }
 
-    // HU-BIB-06: meter a un lector en la cola de un título
     @Transactional
     public ReservaDto crearReserva(CrearReservaDto payload) {
         Lector lector = lectorRepository.findById(payload.getLectorId())
@@ -88,7 +87,6 @@ public class ReservaService {
         return ReservaDto.de(reservaRepository.save(nuevaReserva));
     }
 
-    // El lector ya no quiere el libro
     @Transactional
     public ReservaDto cancelarReserva(Long id) {
         Reserva reserva = buscar(id);
@@ -101,7 +99,6 @@ public class ReservaService {
         reserva.setEstado(EstadoReserva.CANCELADA);
         reservaRepository.save(reserva);
 
-        // Si ya tenía un ejemplar guardado, ese ejemplar pasa al siguiente de la cola
         if (teniaEjemplar) {
             pasarAlSiguiente(reserva.getEjemplar());
         }
@@ -109,7 +106,6 @@ public class ReservaService {
         return ReservaDto.de(reserva);
     }
 
-    // HU-BIB-07: el lector en turno llega por su libro
     @Transactional
     public PrestamoDto entregarReserva(Long id) {
         Reserva reserva = buscar(id);
@@ -118,12 +114,10 @@ public class ReservaService {
             throw new ReglaNegocioException("La reserva no está lista para recoger");
         }
 
-        // El préstamo hace las validaciones del lector y marca la reserva como cumplida
         CrearPrestamoDto prestamo = new CrearPrestamoDto(reserva.getLector().getId(), reserva.getEjemplar().getId());
         return prestamoService.crearPrestamo(prestamo);
     }
 
-    // Cancela las reservas que no se recogieron a tiempo
     @Transactional
     public List<ReservaDto> caducarReservas() {
         List<Reserva> vencidas = reservaRepository.findByEstadoAndFechaLimiteRecoleccionBefore(
@@ -139,7 +133,6 @@ public class ReservaService {
         return canceladas;
     }
 
-    // Corre solo todos los días a las 00:05 (hora del servidor)
     @Scheduled(cron = "0 5 0 * * *")
     @Transactional
     public void caducarCadaDia() {
@@ -151,7 +144,6 @@ public class ReservaService {
         return reservaRepository.findAll().stream().map(ReservaDto::de).toList();
     }
 
-    // La cola de un título, del primero al último
     @Transactional(readOnly = true)
     public List<ReservaDto> colaDelTitulo(Long tituloId) {
         if (!tituloRepository.existsById(tituloId)) {
@@ -171,7 +163,6 @@ public class ReservaService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Reserva", id));
     }
 
-    // Guarda el ejemplar para el siguiente de la cola, o lo deja disponible si ya no hay nadie
     private void pasarAlSiguiente(Ejemplar ejemplar) {
         Optional<Reserva> siguiente = reservaRepository.findFirstByTituloIdAndEstadoOrderByFechaHoraSolicitudAsc(
                 ejemplar.getTitulo().getId(), EstadoReserva.EN_COLA);
