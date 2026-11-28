@@ -14,7 +14,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EditarEjemplarDto {
-    @NotNull(message = "El id del ejemplar es obligatorio")
+    @NotNull(message = "El ID del ejemplar es obligatorio")
     private Long ejemplarId;
     @NotBlank(message = "El folio es obligatorio")
     @Size(max = 50, message = "El folio no puede pasar de 50 caracteres")

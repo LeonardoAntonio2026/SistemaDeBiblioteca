@@ -13,7 +13,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EditarTituloDto {
-    @NotNull(message = "El id del título es obligatorio")
+    @NotNull(message = "El ID del título es obligatorio")
     private Long tituloId;
     @NotBlank(message = "El título es obligatorio")
     @Size(max = 200, message = "El título no puede pasar de 200 caracteres")

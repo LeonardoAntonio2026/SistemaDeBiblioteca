@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DevolverPrestamoDto {
-    @NotNull(message = "El id del préstamo es obligatorio")
+    @NotNull(message = "El ID del préstamo es obligatorio")
     private Long prestamoId;
     @NotNull(message = "El estado del ejemplar es obligatorio")
     private EstadoEjemplar estadoEjemplar;

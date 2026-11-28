@@ -14,7 +14,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EditarLectorDto {
-    @NotNull(message = "El id del lector es obligatorio")
+    @NotNull(message = "El ID del lector es obligatorio")
     private Long lectorId;
     @NotBlank(message = "El folio es obligatorio")
     @Size(max = 50, message = "El folio no puede pasar de 50 caracteres")
@@ -22,7 +22,7 @@ public class EditarLectorDto {
     @NotBlank(message = "El nombre es obligatorio")
     @Size(max = 150, message = "El nombre no puede pasar de 150 caracteres")
     private String nombre;
-    @Size(max = 100, message = "El contacto no puede pasar de 100 caracteres")
+    @Size(max = 100, message = "El contacto no puede exceder de 100 caracteres")
     private String contacto;
     @NotNull(message = "El tipo de lector es obligatorio")
     private Integer tipoLectorId;

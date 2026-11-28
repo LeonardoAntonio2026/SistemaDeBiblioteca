@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EditarTipoLectorDto {
-    @NotNull(message = "El id del tipo de lector es obligatorio")
+    @NotNull(message = "El ID del tipo de lector es obligatorio")
     private Integer tipoLectorId;
     @Min(value = 1, message = "Los días de préstamo deben ser al menos 1")
     private int diasPrestamo;

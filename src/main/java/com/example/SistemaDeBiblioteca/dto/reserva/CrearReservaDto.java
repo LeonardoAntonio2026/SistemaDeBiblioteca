@@ -11,8 +11,8 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CrearReservaDto {
-    @NotNull(message = "El id del lector es obligatorio")
+    @NotNull(message = "El ID del lector es obligatorio")
     private Long lectorId;
-    @NotNull(message = "El id del título es obligatorio")
+    @NotNull(message = "El ID del título es obligatorio")
     private Long tituloId;
 }
